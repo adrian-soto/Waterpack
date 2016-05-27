@@ -1,0 +1,16 @@
+			Waterpack 
+		       Adrian Soto
+	               May 27, 2016
+		  Stony Brook University
+
+
+Waterpack is an open source Python package for the analysis of 
+water data.
+
+This code is constantly under development so use at your own risk.
+
+If you have any questions, please do not hesitate to send an email
+to adrian.soto-cambres@stonybrook.edu.
+
+This code is subject to the GNU general public license. See LICENSE
+file for more information.
