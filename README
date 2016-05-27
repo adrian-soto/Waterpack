@@ -15,7 +15,6 @@ to adrian.soto-cambres@stonybrook.edu.
 This code is subject to the GNU general public license. See LICENSE
 file for more information.
 
-Note: Shall you want to add this package to your Python path so it
-      can be easily loaded, you can find instructions on how to do
-      so here
+Note: Should you want to add this package to your Python path for 
+      easy loading, you can find instructions on how to do that here:
 http://stackoverflow.com/questions/1046628/importing-python-modules-from-different-working-directory
