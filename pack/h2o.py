@@ -1295,7 +1295,6 @@ class cluster:
             # Take from D the O-O submatrix 
             self.rOO=self.D[self.Oindx,:][:,self.Oindx]
         
-
         return
 
 
@@ -1371,9 +1370,7 @@ class cluster:
         # calculate Translational Tetrahedral Order parameter
         # np.sort(self.rOO[imolcentral][:])[1:5] takes the 4
         # smallest O-O distances for the given molecule
-        Sk=self.TTO(np.sort(self.rOO[imolcentral][:])[1:5])
-
-
+        Sk=self.TTO(np.sort(np.copy(self.rOO[imolcentral][:]))[1:5])
 
         return q, Sk
 
@@ -1390,12 +1387,13 @@ class cluster:
         if (np.size(self.rOO) != len(self.Oindx)**2 ):
             self.OOdists(A, Ainv)
 
-                    
+
 
         # Select distances and sort them in place
-        dists=self.rOO[imolcentral][:]
-        dists.sort()
-        dists=np.delete(dists,0)
+        dists=np.copy(self.rOO[imolcentral][:])   # np.copy is important. Otherwise sort
+        dists.sort()                              # command on this line will sort the
+        dists=np.delete(dists,0)                  # original array!!
+
 
 
         # lesser than cutoff?
@@ -1412,7 +1410,6 @@ class cluster:
         
         delta=dists[1:len(dists)] - dists[0:len(dists)-1]
         mean=np.sum(delta)/len(delta)
-
 
         return np.sum((delta-mean)**2)/len(delta)
         
