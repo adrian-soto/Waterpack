@@ -60,7 +60,7 @@ class snapshot:
         
         elif (coordtype=='crystal' or coordtype=='Crystal'):
             # Convert to cartesian
-            self.x=A.dot(self.x.T).T
+            self.x=np.dot(A,self.x.T).T
         else:
             print "ERROR: unrecognized coordtype. EXIT"
             exit()
@@ -213,7 +213,8 @@ class cluster:
     # 5) calculate euclidean distance
     # 
     
-        sij=np.dot(Ainv, (self.x[i]-self.x[j]))
+        
+        sij=np.dot(Ainv, self.x[i]-self.x[j] )
         sij[:]=sij[:] - np.round(sij[:])
         rij=np.dot(A, sij)
         return np.sqrt( np.dot(rij,rij) )
@@ -542,7 +543,7 @@ class cluster:
         R = np.dot(R1, np.dot(R2, R3) )
       
         #aux = R1.dot( R2.dot( R3.dot(vect.T) ) )
-        aux= R.dot(vect.T)
+        aux= np.dot(R,vect.T)
         vect = aux
         
         
@@ -588,7 +589,7 @@ class cluster:
 
 
         # aux = R1*R2*R3*v is the rotated vector      
-        aux = R1.dot( R2.dot( R3.dot(vect.T) ) )
+        aux = np.dot(R1, np.dot(R2, np.dot(R3,vect.T) ) )
         vect = aux
         
         # http://stackoverflow.com/questions/986006/python-how-do-i-pass-a-variable-by-reference
@@ -621,6 +622,22 @@ class cluster:
             self.x[iat] = Euler(alpha, beta, gamma, self.x[iat])
 
         return
+
+
+
+
+    def ab(self, A, Ainv, a, b):
+        #
+        # Calculates the vector b-a with PBC
+        #
+
+        # Minimum image conversion                                                                                                              
+        ab=b-a
+        sab=np.dot(Ainv, ab)
+        sab[:]=sab[:] - np.round(sab[:])
+        ab=np.dot(A,sab)
+        
+        return ab
 
 
 
@@ -931,7 +948,7 @@ class cluster:
 
 
     
-    def dimercoords(self, imol1, imol2):
+    def dimercoords(self, A, Ainv, imol1, imol2):
         # Get dimer internal coordinates
         #
         # rOH11, rOH12, rOH21, rOH22 - O-H distances (Ang)
@@ -963,25 +980,34 @@ class cluster:
 
 
             
-            rOH11=self.d(self.x[self.H2Oindx[imol1][0]], self.x[i11] )
-            rOH12=self.d(self.x[self.H2Oindx[imol1][0]], self.x[i12] )
-            rOH21=self.d(self.x[self.H2Oindx[imol2][0]], self.x[i21] )
-            rOH22=self.d(self.x[self.H2Oindx[imol2][0]], self.x[i22] )
+            #rOH11=self.d_PBC(A, Ainv, self.x[self.H2Oindx[imol1][0]], self.x[i11] )
+            #rOH12=self.d_PBC(A, Ainv, self.x[self.H2Oindx[imol1][0]], self.x[i12] )
+            #rOH21=self.d_PBC(A, Ainv, self.x[self.H2Oindx[imol2][0]], self.x[i21] )
+            #rOH22=self.d_PBC(A, Ainv, self.x[self.H2Oindx[imol2][0]], self.x[i22] )
+            rOH11=d_PBC(A, Ainv, self.x[self.H2Oindx[imol1][0]], self.x[i11] )
+            rOH12=d_PBC(A, Ainv, self.x[self.H2Oindx[imol1][0]], self.x[i12] )
+            rOH21=d_PBC(A, Ainv, self.x[self.H2Oindx[imol2][0]], self.x[i21] )
+            rOH22=d_PBC(A, Ainv, self.x[self.H2Oindx[imol2][0]], self.x[i22] )
             
 
             # intramolecular angles
-            u=self.x[i11] - self.x[self.H2Oindx[imol1][0]]
-            v=self.x[i12] - self.x[self.H2Oindx[imol1][0]]
-            HOH1=self.angle(u,v) 
-            u=self.x[i21] - self.x[self.H2Oindx[imol2][0]]
-            v=self.x[i22] - self.x[self.H2Oindx[imol2][0]]
-            HOH2=self.angle(u,v)
+            HOH1=self.angle_PBC(A, Ainv, self.x[i11] ,self.x[self.H2Oindx[imol1][0]] , self.x[i12]) 
+            HOH2=self.angle_PBC(A, Ainv, self.x[i21] ,self.x[self.H2Oindx[imol2][0]] , self.x[i22]) 
 
 
 
-            # O coordinates (distance and angles)
-            rOO=self.d(self.x[self.H2Oindx[imol1][0]], self.x[self.H2Oindx[imol2][0]])
-            u=self.normalize(self.x[self.H2Oindx[imol2][0]] - self.x[self.H2Oindx[imol1][0]])
+            # O coordinates 
+            # distance
+            #rOO=self.d_PBC(A, Ainv, self.x[self.H2Oindx[imol1][0]], self.x[self.H2Oindx[imol2][0]])
+            rOO=d_PBC(A, Ainv, self.x[self.H2Oindx[imol1][0]], self.x[self.H2Oindx[imol2][0]])
+
+            # angles -- need to apply PBCs to correclty get direction vector
+            u=self.x[self.H2Oindx[imol2][0]] - self.x[self.H2Oindx[imol1][0]]
+            us=np.dot(Ainv, u)
+            us[:]=us[:] - np.round(us[:])
+            u=np.dot(A,us)
+            u=self.normalize(u)
+            
             phi, theta = self.phitheta(u)
             
             
@@ -1006,8 +1032,8 @@ class cluster:
             R=self.EulerMat(0.0, -thetaaux, -phiaux)  # This matrix gives 2 out of 3 Euler angles      
         
             # Rotate normal of secondary molecule is along z
-            xH1aux = R.dot(xH1aux)
-            xH2aux = R.dot(xH2aux)
+            xH1aux = np.dot(R,xH1aux)
+            xH2aux = np.dot(R,xH2aux)
             
             # Calculate third Euler angle alpha
             bisector=self.bisector(xH1aux, xH2aux)
