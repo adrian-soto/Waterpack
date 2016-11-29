@@ -179,6 +179,12 @@ class cluster:
         self.D=False
 
 
+        # Some constants
+        self.deg2rad=math.pi/180.0
+        self.rad2deg=180.0/math.pi
+        
+
+        
 
     #############################
     # class cluster functions
@@ -1143,6 +1149,132 @@ class cluster:
 
 
 
+
+    def isthisHB(self, imol1, imol2, HBdef, A, Ainv):
+        # ASC -- HOMEBASE
+        # Check if molecules imol1 and imol2 are forming an H-bond.
+        # The bond is sought to be of the form
+        #     O1-H1---O2
+        # where imol1 is the donor and imol2 is the acceptor
+        #
+        #
+        #
+        #          HBdef values
+        #
+        # HBdef == 1 (FROM Corsetti et. al, JCP 139, 194502 (2013), Appendix B)
+        # Needs to satisfy:
+        #   (i) The intermolecular distance rOO < r_cut , where r_cut is 
+        #       usually chosen as the position of OO OO the first minimum 
+        #       in the O-O RDF (==3.5 Ang)
+        #  (ii) The angle Oa-Od-Hd < theta^cut_OOH == 30deg
+        #
+        #
+        # OUTPUT:
+        #   HB ==  1 if imol1 and imol2 are H-bonded and imol1 is DONOR
+        #   HB == -1 if imol1 and imol2 are H-bonded and imol1 is ACCEPTOR
+        #   HB ==  0 if imol1 and imol2 are NOT H-bonded
+        #
+
+        # Check molecules are different
+        if (imol1 == imol2):
+            return 0
+
+
+
+
+        # Initalize to False
+        HB=0
+        
+        # Find indices to all 6 participating atoms
+        iO1 =self.H2Oindx[imol1][0]
+        iH11=self.H2Oindx[imol1][1]
+        iH12=self.H2Oindx[imol1][2]
+        iO2 =self.H2Oindx[imol2][0]
+        iH21=self.H2Oindx[imol2][1]
+        iH22=self.H2Oindx[imol2][2]
+
+        
+        if (HBdef==1):
+            
+            r_cut    = 3.5                  # (Ang)
+            theta_cut= 30.0*self.deg2rad    # (rad)
+
+
+            # Check (i) and (ii)
+            if (self.D[iO1][iO2] <= r_cut): # Distance requirement passed.
+
+                
+                # Now establish possible H-bond and check angles.
+
+                # Get all 4 INTERMOLECULAR O-H distances
+                d121=self.D[iO1][iH21]
+                d122=self.D[iO1][iH22]
+                d211=self.D[iO2][iH11]
+                d212=self.D[iO2][iH12]
+                alld=[d121,d122,d211,d212]
+                
+                # Minimum intramolecular O-H distance determines possible 
+                # H bond. Find it, assign corresponding O to acceptor molecule 
+                # and H to donor molecule and then place set index values 
+                # for molecules and Hydrogens.
+                minindx=alld.index(min(alld)) 
+                
+                if (minindx==0):
+                    donormol   = imol2
+                    acceptormol= imol1
+                    donorO     = iO2
+                    acceptorO  = iO1
+                    donorH     = iH21
+                    passiveH   = iH22
+            
+                elif(minindx==1):
+                    donormol   = imol2
+                    acceptormol= imol1
+                    donorO     = iO2
+                    acceptorO  = iO1
+                    donorH     = iH22
+                    passiveH   = iH21
+                    
+                elif(minindx==2):
+                    donormol   = imol1
+                    acceptormol= imol2
+                    donorO     = iO1
+                    acceptorO  = iO2
+                    donorH     = iH11
+                    passiveH   = iH12
+                    
+                elif(minindx==3):
+                    donormol    = imol1
+                    acceptormol = imol2
+                    donorO      = iO1
+                    acceptorO   = iO2
+                    donorH      = iH12
+                    passiveH    = iH11
+            
+
+                # Now the possible H-bond is determined. Check angle Oa-Od-Hd angle.
+                theta=self.angle_PBC(A, Ainv, self.x[acceptorO], self.x[donorO], self.x[donorH])
+                
+                if(theta <= theta_cut): # HB 
+                    if  (imol1 == donormol):
+                        HB = 1
+                    elif(imol1 == acceptormol):
+                        HB =-1
+                else:
+                    HB = 0
+            
+            else:
+                HB = 0
+
+        else:
+            print "HBtype not recognized. Exiting..."
+            exit()
+
+            
+        return HB
+
+
+
     def donHfirst(self, primaryh, secondaryh):
         # 
         # Make the donated Hydrogen be the first in the primary 
@@ -1259,7 +1391,7 @@ class cluster:
         # Calculate D, the matrix of interatomic
         # distances. This is a symmetric matrix with
         # zero diagonal so we only need to calculate 
-        # the distances 
+        # the distances for i2<i1
         #
         # Initialize matrix
         if (np.all(self.D)==False):
@@ -1289,7 +1421,6 @@ class cluster:
         #
         # Calculate matrix of O-O distances.
         #
-
 
 
         # If D has not been created yet
@@ -1440,7 +1571,9 @@ class cluster:
         return np.sum((delta-mean)**2)/len(delta)
         
 
-        
+
+
+    
 
 
 #################################
